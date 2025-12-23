@@ -2135,3 +2135,1485 @@ print(combined)
 ```
 
 ---
+## 12. Copy vs View
+
+### 🤔 WHY
+
+**Why this matters:**
+Understanding copy vs view prevents unexpected bugs! Modifying a view changes the original array, but modifying a copy doesn't.
+
+**Real-Life Analogy:**
+- **View**: Like a mirror reflection - change the object, the mirror changes too
+- **Copy**: Like a photograph - the photo stays the same even if the original changes
+
+**Common Bug:**
+```python
+# Dangerous if you don't know about views!
+arr = np.array([1, 2, 3, 4, 5])
+subset = arr[1:4]  # This is a VIEW!
+subset[0] = 999    # Modifies ORIGINAL array!
+print(arr)  # [1, 999, 3, 4, 5] - Surprise!
+```
+
+### ⏰ WHEN
+
+**Use Views (default) when:**
+- Want memory efficiency (no duplication)
+- Intentionally want to modify original
+- Working with large arrays
+
+**Use Copies when:**
+- Need independent data
+- Don't want to affect original
+- Archiving/backup
+
+### 🔧 HOW
+
+**How to tell if it's a view or copy:**
+- Most slicing operations create VIEWS
+- `copy()` method creates COPY
+- Use `.base` attribute to check
+
+**Example 1: Understanding Views**
+```python
+import numpy as np
+
+original = np.array([1, 2, 3, 4, 5])
+
+# Slicing creates a VIEW
+view = original[1:4]
+print(f"View: {view}")
+print(f"View base (original): {view.base is original}")  # True!
+
+# Modify view - changes original!
+view[0] = 999
+print(f"After modifying view:")
+print(f"  Original: {original}")  # [1, 999, 3, 4, 5]
+print(f"  View: {view}")          # [999, 3, 4]
+
+# Output:
+# View: [2 3 4]
+# View base (original): True
+# After modifying view:
+#   Original: [1 999 3 4 5]
+#   View: [999 3 4]
+```
+
+**Example 2: Creating Copies**
+```python
+import numpy as np
+
+original = np.array([1, 2, 3, 4, 5])
+
+# Create a COPY
+copy = original[1:4].copy()
+print(f"Copy: {copy}")
+print(f"Copy base: {copy.base is None}")  # True - no base!
+
+# Modify copy - doesn't change original
+copy[0] = 999
+print(f"After modifying copy:")
+print(f"  Original: {original}")  # [1, 2, 3, 4, 5] - unchanged!
+print(f"  Copy: {copy}")          # [999, 3, 4]
+
+# Output:
+# Copy: [2 3 4]
+# Copy base: True
+# After modifying copy:
+#   Original: [1 2 3 4 5]
+#   Copy: [999 3 4]
+```
+
+**Example 3: Operations That Create Views vs Copies**
+```python
+import numpy as np
+
+arr = np.array([1, 2, 3, 4, 5, 6])
+
+# VIEWS (no copy)
+view1 = arr[1:4]        # Slicing
+view2 = arr.reshape(2, 3)  # Reshape
+view3 = arr.ravel()     # Ravel
+view4 = arr.T           # Transpose
+
+print("These are VIEWS:")
+print(f"  Slice view: {view1.base is arr}")
+print(f"  Reshape view: {view2.base is arr}")
+print(f"  Ravel view: {view3.base is arr}")
+
+# COPIES (new array)
+copy1 = arr.copy()      # Explicit copy
+copy2 = arr.flatten()   # Flatten
+copy3 = arr[[0, 2, 4]]  # Fancy indexing
+
+print("\nThese are COPIES:")
+print(f"  Copy: {copy1.base is None}")
+print(f"  Flatten: {copy2.base is None}")
+print(f"  Fancy index: {copy3.base is None}")
+```
+
+**Example 4: Safe Data Manipulation**
+```python
+import numpy as np
+
+# Original data
+data = np.array([10, 20, 30, 40, 50])
+
+# Scenario 1: Want to experiment without changing original
+experimental = data.copy()  # Safe copy
+experimental *= 2
+print(f"Original: {data}")        # [10, 20, 30, 40, 50]
+print(f"Experimental: {experimental}")  # [20, 40, 60, 80, 100]
+
+# Scenario 2: Want to modify original efficiently
+view = data[1:4]  # View for efficiency
+view += 5          # Changes original
+print(f"After view modification: {data}")
+# Output: [10, 25, 35, 45, 50]
+```
+
+**Example 5: Checking View/Copy**
+```python
+import numpy as np
+
+arr = np.array([1, 2, 3, 4, 5])
+
+# Function to check if view or copy
+def is_view(arr_subset, original):
+    return arr_subset.base is original
+
+slice_result = arr[1:3]
+copy_result = arr[1:3].copy()
+
+print(f"Slice is view: {is_view(slice_result, arr)}")  # True
+print(f"Copy is view: {is_view(copy_result, arr)}")    # False
+```
+
+### 🏋️ Practice Question
+**Q:** What will be the output?
+```python
+arr = np.array([1, 2, 3, 4, 5])
+sub1 = arr[1:3]
+sub2 = arr[1:3].copy()
+sub1[0] = 100
+sub2[1] = 200
+print(arr)
+```
+
+**A:** `[1, 100, 3, 4, 5]`
+- `sub1` is a view, so `sub1[0] = 100` modifies `arr[1]` → 100
+- `sub2` is a copy, so `sub2[1] = 200` doesn't affect arr
+- Result: arr[1] changed to 100, but arr[2] stays 3
+
+---
+
+## 13. Boolean Indexing and Filtering
+
+### 🤔 WHY
+
+**Why boolean indexing is powerful:**
+Filter data based on conditions without writing loops!
+
+**Real-Life Analogy:**
+Like using a strainer:
+- Pour water through strainer → water passes, solids stay
+- Apply condition to array → matching elements pass, others filtered out
+
+**Example of power:**
+```python
+# Without NumPy - need loops
+scores = [85, 92, 78, 95, 88]
+high_scores = []
+for score in scores:
+    if score >= 90:
+        high_scores.append(score)
+
+# With NumPy - one line!
+scores = np.array([85, 92, 78, 95, 88])
+high_scores = scores[scores >= 90]
+```
+
+### ⏰ WHEN
+
+**Use boolean indexing for:**
+- Filtering data based on conditions
+- Finding outliers
+- Data cleaning
+- Conditional updates
+- Statistical analysis
+
+**Real examples:**
+- Find all prices above $100
+- Get students who passed (score >= 60)
+- Remove negative values
+- Find temperatures above average
+
+### 🔧 HOW
+
+**How it works:**
+1. Create boolean array with condition
+2. Use boolean array to index original array
+3. Get only elements where condition is True
+
+**Example 1: Basic Boolean Indexing**
+```python
+import numpy as np
+
+ages = np.array([25, 17, 32, 19, 45, 16, 28])
+
+# Step 1: Create boolean mask
+adults = ages >= 18
+print(f"Boolean mask: {adults}")
+# Output: Boolean mask: [ True False  True  True  True False  True]
+
+# Step 2: Use mask to filter
+adult_ages = ages[adults]
+print(f"Adult ages: {adult_ages}")
+# Output: Adult ages: [25 32 19 45 28]
+
+# Or in one line:
+adult_ages = ages[ages >= 18]
+print(f"Adults (one line): {adult_ages}")
+```
+
+**Example 2: Multiple Conditions**
+```python
+import numpy as np
+
+scores = np.array([85, 92, 78, 95, 88, 65, 91, 73])
+
+# AND condition: 80 <= score <= 90
+good_scores = scores[(scores >= 80) & (scores <= 90)]
+print(f"Scores 80-90: {good_scores}")
+# Output: Scores 80-90: [85 88]
+
+# OR condition: score < 70 OR score >= 90
+extreme_scores = scores[(scores < 70) | (scores >= 90)]
+print(f"Extreme scores: {extreme_scores}")
+# Output: Extreme scores: [92 95 65]
+
+# NOT condition: not between 75-85
+not_mid = scores[~((scores >= 75) & (scores <= 85))]
+print(f"Not mid-range: {not_mid}")
+# Output: Not mid-range: [92 95 88 65 91 73]
+```
+
+**Example 3: Conditional Update**
+```python
+import numpy as np
+
+prices = np.array([45, 120, 80, 200, 95, 150])
+
+print(f"Original prices: {prices}")
+
+# Cap prices at 100 (set all above 100 to 100)
+prices[prices > 100] = 100
+print(f"After capping at 100: {prices}")
+# Output: After capping at 100: [ 45 100  80 100  95 100]
+
+# Add 10% tax to items under $50
+prices_2 = np.array([45, 120, 80, 200, 95, 150])
+cheap = prices_2 < 50
+prices_2[cheap] = prices_2[cheap] * 1.10
+print(f"After tax on cheap items: {prices_2}")
+# Output: After tax on cheap items: [ 49.5 120 80 200 95 150]
+```
+
+**Example 4: Finding Indices**
+```python
+import numpy as np
+
+temperatures = np.array([72, 68, 85, 90, 65, 78, 92])
+
+# Find indices where temp > 80
+hot_days_indices = np.where(temperatures > 80)
+print(f"Hot days (indices): {hot_days_indices}")
+# Output: Hot days (indices): (array([2, 3, 6]),)
+
+# Get the actual temperatures
+hot_temps = temperatures[temperatures > 80]
+print(f"Hot temperatures: {hot_temps}")
+# Output: Hot temperatures: [85 90 92]
+
+# Find index of maximum
+max_index = np.argmax(temperatures)
+print(f"Hottest day: Day {max_index} with {temperatures[max_index]}°F")
+# Output: Hottest day: Day 6 with 92°F
+```
+
+**Example 5: Filtering 2D Arrays**
+```python
+import numpy as np
+
+# Student grades: rows=students, columns=subjects
+grades = np.array([[85, 90, 78],
+                   [92, 88, 95],
+                   [65, 70, 68],
+                   [78, 85, 82]])
+
+print("All grades:")
+print(grades)
+
+# Find all grades above 85
+high_grades = grades[grades > 85]
+print(f"\nAll grades > 85: {high_grades}")
+# Output: All grades > 85: [90 92 88 95]
+
+# Get students (rows) with average >= 80
+averages = grades.mean(axis=1)
+print(f"\nAverages: {averages}")
+passing_students = grades[averages >= 80]
+print(f"Passing students:\n{passing_students}")
+# Output:
+# Passing students:
+# [[85 90 78]
+#  [92 88 95]
+#  [78 85 82]]
+```
+
+**Example 6: Real-World - Data Cleaning**
+```python
+import numpy as np
+
+# Sensor data with some errors (negative values)
+sensor_data = np.array([23.5, -1.0, 25.3, 24.8, -999, 26.1, 23.9])
+
+print(f"Raw data: {sensor_data}")
+
+# Remove invalid readings (< 0)
+valid_data = sensor_data[sensor_data >= 0]
+print(f"Valid data: {valid_data}")
+# Output: Valid data: [23.5 25.3 24.8 26.1 23.9]
+
+# Replace invalid with mean of valid
+mean_valid = valid_data.mean()
+sensor_data[sensor_data < 0] = mean_valid
+print(f"Cleaned data: {sensor_data}")
+# Output: Cleaned data: [23.5 24.72 25.3 24.8 24.72 26.1 23.9]
+```
+
+### 🏋️ Practice Question
+**Q:** Given `salaries = np.array([45000, 65000, 52000, 78000, 48000, 95000])`, write code to:
+1. Find salaries between 50K and 70K
+2. Give 10% raise to those earning under 50K
+3. Count how many earn over 60K
+
+**A:**
+```python
+import numpy as np
+
+salaries = np.array([45000, 65000, 52000, 78000, 48000, 95000])
+
+# 1. Between 50K-70K
+mid_range = salaries[(salaries >= 50000) & (salaries <= 70000)]
+print(f"Mid-range: {mid_range}")  # [65000 52000]
+
+# 2. 10% raise for under 50K
+under_50k = salaries < 50000
+salaries[under_50k] = salaries[under_50k] * 1.10
+print(f"After raises: {salaries}")  # [49500 65000 52000 78000 52800 95000]
+
+# 3. Count over 60K
+over_60k = np.sum(salaries > 60000)
+print(f"Count over 60K: {over_60k}")  # 3
+```
+
+---
+
+## 14. Sorting and Searching
+
+### 🤔 WHY
+
+**Why sorting and searching:**
+- Organize data for analysis
+- Find specific values quickly
+- Rank items
+- Identify top/bottom performers
+
+**Real-Life Analogy:**
+- **Sorting**: Like arranging books alphabetically on a shelf
+- **Searching**: Like finding where "Python" is in sorted bookshelf
+
+### ⏰ WHEN
+
+**Use sorting for:**
+- Finding top N items
+- Organizing data for reports
+- Preparing data for binary search
+- Ranking students/products
+
+**Use searching for:**
+- Finding if value exists
+- Locating specific elements
+- Finding insertion points
+
+### 🔧 HOW
+
+**Sorting Functions:**
+- `sort()`: In-place sort (modifies original)
+- `np.sort()`: Returns sorted copy
+- `argsort()`: Returns indices that would sort array
+
+**Searching Functions:**
+- `np.where()`: Find indices matching condition
+- `np.searchsorted()`: Find insertion index
+- `np.argmax()`, `np.argmin()`: Find index of max/min
+
+### 14.1 Sorting
+
+**Example 1: Basic Sorting**
+```python
+import numpy as np
+
+scores = np.array([85, 92, 78, 95, 88, 91, 83])
+
+# Sort (returns new sorted array)
+sorted_scores = np.sort(scores)
+print(f"Original: {scores}")
+print(f"Sorted: {sorted_scores}")
+# Output:
+# Original: [85 92 78 95 88 91 83]
+# Sorted: [78 83 85 88 91 92 95]
+
+# Sort in descending order
+desc_scores = np.sort(scores)[::-1]
+print(f"Descending: {desc_scores}")
+# Output: Descending: [95 92 91 88 85 83 78]
+
+# In-place sort (modifies original)
+scores.sort()
+print(f"After in-place sort: {scores}")
+# Output: After in-place sort: [78 83 85 88 91 92 95]
+```
+
+**Example 2: Argsort - Get Sort Indices**
+```python
+import numpy as np
+
+students = np.array(['Alice', 'Bob', 'Charlie', 'David'])
+scores = np.array([85, 92, 78, 95])
+
+# Get indices that would sort scores
+sorted_indices = np.argsort(scores)
+print(f"Sort indices: {sorted_indices}")
+# Output: Sort indices: [2 0 1 3]  # Charlie, Alice, Bob, David
+
+# Use indices to sort both arrays
+print(f"Students by score:")
+for idx in sorted_indices:
+    print(f"  {students[idx]}: {scores[idx]}")
+# Output:
+#  Charlie: 78
+#  Alice: 85
+#  Bob: 92
+#  David: 95
+
+# Top 3 students
+top_3_indices = np.argsort(scores)[-3:][::-1]
+print(f"\nTop 3: {students[top_3_indices]}")
+# Output: Top 3: ['David' 'Bob' 'Alice']
+```
+
+**Example 3: Sorting 2D Arrays**
+```python
+import numpy as np
+
+# Student grades: rows=students, columns=subjects
+grades = np.array([[85, 90, 78],
+                   [92, 88, 95],
+                   [78, 85, 82]])
+
+print("Original:")
+print(grades)
+
+# Sort each row independently
+row_sorted = np.sort(grades, axis=1)
+print(f"\nEach row sorted:\n{row_sorted}")
+# Output:
+# [[78 85 90]
+#  [88 92 95]
+#  [78 82 85]]
+
+# Sort each column independently
+col_sorted = np.sort(grades, axis=0)
+print(f"\nEach column sorted:\n{col_sorted}")
+# Output:
+# [[78 85 78]
+#  [85 88 82]
+#  [92 90 95]]
+
+# Sort rows by first column (Math scores)
+sorted_by_math = grades[grades[:, 0].argsort()]
+print(f"\nSorted by Math (column 0):\n{sorted_by_math}")
+```
+
+### 14.2 Searching
+
+**Example 1: Using where()**
+```python
+import numpy as np
+
+prices = np.array([45, 120, 80, 200, 95, 150, 60])
+
+# Find indices where price > 100
+expensive_indices = np.where(prices > 100)
+print(f"Expensive items at indices: {expensive_indices[0]}")
+# Output: Expensive items at indices: [1 3 5]
+
+print(f"Expensive prices: {prices[expensive_indices]}")
+# Output: Expensive prices: [120 200 150]
+
+# Find first occurrence
+first_expensive = np.where(prices > 100)[0][0]
+print(f"First expensive item at index: {first_expensive}")
+# Output: First expensive item at index: 1
+
+# Multiple conditions
+affordable = np.where((prices >= 50) & (prices <= 100))
+print(f"Affordable (50-100): {prices[affordable]}")
+# Output: Affordable (50-100): [80 95 60]
+```
+
+**Example 2: searchsorted() - Binary Search**
+```python
+import numpy as np
+
+# MUST be sorted for searchsorted!
+sorted_scores = np.array([70, 75, 80, 85, 90, 95])
+
+# Find where to insert to maintain sort order
+insert_index = np.searchsorted(sorted_scores, 83)
+print(f"Insert 83 at index: {insert_index}")
+# Output: Insert 83 at index: 3  # Between 80 and 85
+
+# Multiple values
+new_scores = [72, 88, 97]
+insert_indices = np.searchsorted(sorted_scores, new_scores)
+print(f"Insert indices for {new_scores}: {insert_indices}")
+# Output: Insert indices for [72, 88, 97]: [1 4 6]
+
+# Check if value exists
+value = 85
+idx = np.searchsorted(sorted_scores, value)
+exists = idx < len(sorted_scores) and sorted_scores[idx] == value
+print(f"Does {value} exist? {exists}")
+# Output: Does 85 exist? True
+```
+
+**Example 3: Finding Top N Elements**
+```python
+import numpy as np
+
+sales = np.array([230, 450, 180, 520, 390, 280, 610, 155])
+
+# Top 3 sales
+top_3_indices = np.argsort(sales)[-3:][::-1]
+top_3_sales = sales[top_3_indices]
+print(f"Top 3 sales: {top_3_sales}")
+print(f"At indices: {top_3_indices}")
+# Output:
+# Top 3 sales: [610 520 450]
+# At indices: [6 3 1]
+
+# Alternative using np.partition (faster for large arrays)
+# Partition: puts smallest k on left, largest k on right
+partitioned = np.partition(sales, -3)  # -3 = top 3
+print(f"\nPartitioned: {partitioned}")
+print(f"Top 3 (unsorted): {partitioned[-3:]}")
+# Top 3 is at the end, but not sorted among themselves
+```
+
+### 🏋️ Practice Question
+**Q:** Given `test_scores = np.array([78, 92, 85, 88, 76, 94, 81])`:
+1. Sort scores in descending order
+2. Find the index of the highest score
+3. Find how many scores are above 85
+
+**A:**
+```python
+import numpy as np
+
+test_scores = np.array([78, 92, 85, 88, 76, 94, 81])
+
+# 1. Descending
+desc = np.sort(test_scores)[::-1]
+print(f"Descending: {desc}")  # [94 92 88 85 81 78 76]
+
+# 2. Index of highest
+highest_idx = np.argmax(test_scores)
+print(f"Highest at index: {highest_idx}")  # 5
+
+# 3. Count above 85
+above_85 = np.sum(test_scores > 85)
+print(f"Scores > 85: {above_85}")  # 3
+```
+
+---
+
+## 15. Random Module
+
+### 🤔 WHY
+
+**Why random numbers:**
+- Testing and simulation
+- Machine learning (random initialization)
+- Games and animations
+- Statistical sampling
+- Data augmentation
+
+**Real-Life Analogy:**
+- **Random integers**: Like rolling dice
+- **Random floats**: Like spinning a wheel with infinite stops
+- **Random choice**: Like picking a card from a deck
+
+### ⏰ WHEN
+
+**Use random module for:**
+- Generating test data
+- Initializing neural network weights
+- Creating random samples from datasets
+- Simulation and Monte Carlo methods
+- Shuffling data
+
+### 🔧 HOW
+
+**Key Functions:**
+- `np.random.rand()`: Random floats [0, 1)
+- `np.random.randint()`: Random integers
+- `np.random.randn()`: Normal distribution (mean=0, std=1)
+- `np.random.choice()`: Random selection from array
+- `np.random.shuffle()`: Shuffle in-place
+- `np.random.seed()`: Set random seed (reproducibility)
+
+**Example 1: Basic Random Generation**
+```python
+import numpy as np
+
+# Random floats between 0 and 1
+random_floats = np.random.rand(5)
+print(f"Random floats: {random_floats}")
+# Output: Random floats: [0.417 0.720 0.000 0.302 0.147]
+
+# Random floats in specific range [10, 20)
+random_range = np.random.rand(5) * 10 + 10
+print(f"Random 10-20: {random_range}")
+# Output: Random 10-20: [14.17 17.20 10.00 13.02 11.47]
+
+# Random integers
+random_ints = np.random.randint(1, 100, size=5)
+print(f"Random integers 1-99: {random_ints}")
+# Output: Random integers 1-99: [42 67 23 89 15]
+
+# Random 2D array
+random_matrix = np.random.rand(3, 4)
+print(f"Random 3×4 matrix:\n{random_matrix}")
+```
+
+**Example 2: Normal Distribution**
+```python
+import numpy as np
+
+# Standard normal (mean=0, std=1)
+normal = np.random.randn(5)
+print(f"Standard normal: {normal}")
+# Output: Standard normal: [-0.234 1.456 -0.567 0.234 1.123]
+
+# Custom mean and std
+# Formula: mean + std * randn()
+mean = 100
+std = 15
+test_scores = mean + std * np.random.randn(10)
+print(f"Test scores (mean=100, std=15):")
+print(test_scores)
+# Output: Test scores around 100, varying by ~15
+
+# Verify
+print(f"Actual mean: {test_scores.mean():.2f}")
+print(f"Actual std: {test_scores.std():.2f}")
+```
+
+**Example 3: Random Choice and Shuffle**
+```python
+import numpy as np
+
+# Random choice from array
+fruits = np.array(['apple', 'banana', 'cherry', 'date'])
+random_fruit = np.random.choice(fruits)
+print(f"Random fruit: {random_fruit}")
+# Output: Random fruit: banana
+
+# Multiple random choices (with replacement)
+random_basket = np.random.choice(fruits, size=5)
+print(f"Random basket: {random_basket}")
+# Output: Random basket: ['banana' 'apple' 'banana' 'cherry' 'apple']
+
+# Random choice without replacement
+sample_3 = np.random.choice(fruits, size=3, replace=False)
+print(f"Sample 3 unique: {sample_3}")
+# Output: Sample 3 unique: ['cherry' 'apple' 'date']
+
+# Shuffle array (in-place)
+numbers = np.array([1, 2, 3, 4, 5])
+np.random.shuffle(numbers)
+print(f"Shuffled: {numbers}")
+# Output: Shuffled: [3 1 5 2 4]
+```
+
+**Example 4: Reproducible Random (Seeds)**
+```python
+import numpy as np
+
+# Without seed - different each time
+print("Without seed:")
+print(np.random.rand(3))
+print(np.random.rand(3))
+# Output: Different values each time
+
+# With seed - same results every time
+print("\nWith seed=42:")
+np.random.seed(42)
+print(np.random.rand(3))
+
+np.random.seed(42)  # Reset to same seed
+print(np.random.rand(3))  # Same as above!
+# Output: Both print same values!
+
+# Useful for debugging and testing
+np.random.seed(42)
+test_data = np.random.randn(100)
+# Now anyone can reproduce your results with seed=42
+```
+
+**Example 5: Real-World Applications**
+```python
+import numpy as np
+
+# 1. Train/Test split with shuffle
+np.random.seed(42)
+data = np.arange(100)
+np.random.shuffle(data)
+train = data[:80]  # 80% train
+test = data[80:]   # 20% test
+print(f"Train size: {len(train)}, Test size: {len(test)}")
+
+# 2. Monte Carlo simulation - estimating Pi
+np.random.seed(42)
+n_points = 10000
+x = np.random.rand(n_points)
+y = np.random.rand(n_points)
+inside_circle = (x**2 + y**2) <= 1
+pi_estimate = 4 * np.sum(inside_circle) / n_points
+print(f"Pi estimate: {pi_estimate:.4f}")  # Should be close to 3.1416
+
+# 3. Generate synthetic dataset
+np.random.seed(42)
+n_samples = 100
+# Features: height (cm), weight (kg)
+heights = 160 + 20 * np.random.randn(n_samples)
+weights = 50 + 10 * np.random.randn(n_samples)
+dataset = np.column_stack([heights, weights])
+print(f"Dataset shape: {dataset.shape}")
+print(f"First 5 samples:\n{dataset[:5]}")
+```
+
+**Example 6: Probability-based Choice**
+```python
+import numpy as np
+
+# Weighted random choice
+outcomes = ['win', 'lose', 'draw']
+probabilities = [0.2, 0.5, 0.3]  # 20% win, 50% lose, 30% draw
+
+np.random.seed(42)
+results = np.random.choice(outcomes, size=1000, p=probabilities)
+
+# Count outcomes
+unique, counts = np.unique(results, return_counts=True)
+for outcome, count in zip(unique, counts):
+    print(f"{outcome}: {count/10:.1f}%")
+# Output close to: win: 20%, lose: 50%, draw: 30%
+```
+
+### 🏋️ Practice Question
+**Q:** Create a simulation of rolling two dice 1000 times. Find:
+1. Average sum of the dice
+2. How many times you got sum of 7
+3. Most common sum
+
+**A:**
+```python
+import numpy as np
+
+np.random.seed(42)
+# Roll two dice 1000 times
+die1 = np.random.randint(1, 7, size=1000)
+die2 = np.random.randint(1, 7, size=1000)
+sums = die1 + die2
+
+# 1. Average sum
+avg = sums.mean()
+print(f"Average sum: {avg:.2f}")  # Should be close to 7
+
+# 2. Count of 7s
+sevens = np.sum(sums == 7)
+print(f"Number of 7s: {sevens}")  # Should be ~167 (16.67%)
+
+# 3. Most common
+unique, counts = np.unique(sums, return_counts=True)
+most_common = unique[np.argmax(counts)]
+print(f"Most common sum: {most_common}")  # Likely 7
+```
+
+---
+## 16. NumPy with Real-World Examples
+
+### 🎯 Real Example 1: Grade Analysis System
+
+```python
+import numpy as np
+
+# Student grades: 5 students × 4 subjects (Math, Science, English, History)
+grades = np.array([[85, 90, 78, 92],
+                   [92, 88, 95, 89],
+                   [78, 85, 82, 91],
+                   [95, 92, 88, 94],
+                   [70, 75, 72, 68]])
+
+students = np.array(['Alice', 'Bob', 'Charlie', 'David', 'Eve'])
+subjects = np.array(['Math', 'Science', 'English', 'History'])
+
+print("="*50)
+print("GRADE ANALYSIS SYSTEM")
+print("="*50)
+
+# 1. Overall statistics
+print(f"\nClass Average: {grades.mean():.2f}")
+print(f"Highest Grade: {grades.max()}")
+print(f"Lowest Grade: {grades.min()}")
+print(f"Standard Deviation: {grades.std():.2f}")
+
+# 2. Per-student analysis
+print(f"\n{'Student':<10} {'Average':<10} {'Grade'}")
+print("-" * 30)
+for i, student in enumerate(students):
+    avg = grades[i].mean()
+    if avg >= 90:
+        grade = 'A'
+    elif avg >= 80:
+        grade = 'B'
+    elif avg >= 70:
+        grade = 'C'
+    else:
+        grade = 'D'
+    print(f"{student:<10} {avg:< 10.2f} {grade}")
+
+# 3. Per-subject analysis
+print(f"\n{'Subject':<10} {'Average':<10} {'Highest':<10} {'Lowest'}")
+print("-" * 40)
+for j, subject in enumerate(subjects):
+    subject_grades = grades[:, j]
+    print(f"{subject:<10} {subject_grades.mean():<10.2f} "
+          f"{subject_grades.max():<10} {subject_grades.min():<10}")
+
+# 4. Top student
+top_student_idx = grades.mean(axis=1).argmax()
+print(f"\nTop Student: {students[top_student_idx]} "
+      f"(Average: {grades[top_student_idx].mean():.2f})")
+
+# 5. Students who need help (average < 75)
+struggling = grades.mean(axis=1) < 75
+if struggling.any():
+    print(f"\nStudents needing help: {students[struggling]}")
+```
+
+### 🎯 Real Example 2: Sales Data Analysis
+
+```python
+import numpy as np
+
+# Sales data: 4 quarters × 3 products
+sales = np.array([[15000, 23000, 18000],  # Q1
+                  [17000, 25000, 19000],  # Q2
+                  [19000, 27000, 21000],  # Q3
+                  [21000, 29000, 23000]]) # Q4
+
+products = ['Product A', 'Product B', 'Product C']
+quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+
+print("="*60)
+print("SALES ANALYSIS DASHBOARD")
+print("="*60)
+
+# 1. Total sales
+total_sales = sales.sum()
+print(f"\nTotal Annual Sales: ${total_sales:,}")
+
+# 2. Sales by product
+print(f"\n{'Product':<15} {'Total Sales':<15} {'% of Total'}")
+print("-" * 45)
+for i, product in enumerate(products):
+    product_total = sales[:, i].sum()
+    percentage = (product_total / total_sales) * 100
+    print(f"{product:<15} ${product_total:< 14,} {percentage:.1f}%")
+
+# 3. Sales by quarter
+print(f"\n{'Quarter':<10} {'Total Sales':<15} {'Growth'}")
+print("-" * 40)
+for i, quarter in enumerate(quarters):
+    quarter_total = sales[i].sum()
+    if i == 0:
+        growth = "N/A"
+    else:
+        prev_total = sales[i-1].sum()
+        growth_pct = ((quarter_total - prev_total) / prev_total) * 100
+        growth = f"+{growth_pct:.1f}%"
+    print(f"{quarter:<10} ${quarter_total:< 14,} {growth}")
+
+# 4. Best performing product-quarter combination
+max_sale_idx = np.unravel_index(sales.argmax(), sales.shape)
+print(f"\nBest Performance: {products[max_sale_idx[1]]} in {quarters[max_sale_idx[0]]} "
+      f"(${sales[max_sale_idx]:,})")
+
+# 5. Growth trend
+q1_sales = sales[0].sum()
+q4_sales = sales[-1].sum()
+annual_growth = ((q4_sales - q1_sales) / q1_sales) * 100
+print(f"Annual Growth: {annual_growth:.1f}%")
+```
+
+### 🎯 Real Example 3: Image Processing Basics
+
+```python
+import numpy as np
+
+# Simulate a small grayscale image (5×5 pixels, values 0-255)
+image = np.array([[100, 150, 200, 150, 100],
+                  [120, 170, 220, 170, 120],
+                  [140, 190, 255, 190, 140],
+                  [120, 170, 220, 170, 120],
+                  [100, 150, 200, 150, 100]])
+
+print("Original Image (5×5 pixels):")
+print(image)
+
+# 1. Increase brightness (add 30 to all pixels, clip to 255)
+brighter = np.clip(image + 30, 0, 255)
+print(f"\nBrighter Image:")
+print(brighter)
+
+# 2. Decrease brightness (multiply by 0.7)
+darker = (image * 0.7).astype(int)
+print(f"\nDarker Image:")
+print(darker)
+
+# 3. Invert image (negative)
+inverted = 255 - image
+print(f"\nInverted Image:")
+print(inverted)
+
+# 4. Thresholding (convert to binary: black/white)
+threshold = 170
+binary = np.where(image > threshold, 255, 0)
+print(f"\nBinary Image (threshold={threshold}):")
+print(binary)
+
+# 5. Get image statistics
+print(f"\nImage Statistics:")
+print(f"  Average brightness: {image.mean():.2f}")
+print(f"  Darkest pixel: {image.min()}")
+print(f"  Brightest pixel: {image.max()}")
+print(f"  Contrast (std dev): {image.std():.2f}")
+```
+
+### 🎯 Real Example 4: Simple Stock Price Analysis
+
+```python
+import numpy as np
+
+# Simulated daily stock prices for 30 days
+np.random.seed(42)
+base_price = 100
+daily_changes = np.random.randn(30) * 2  # Random daily changes
+prices = base_price + np.cumsum(daily_changes)
+prices = np.clip(prices, 50, 200)  # Keep reasonable
+
+print("="*50)
+print("STOCK PRICE ANALYSIS (30 Days)")
+print("="*50)
+
+# 1. Basic statistics
+print(f"\nOpening Price: ${prices[0]:.2f}")
+print(f"Closing Price: ${prices[-1]:.2f}")
+print(f"Highest Price: ${prices.max():.2f}")
+print(f"Lowest Price: ${prices.min():.2f}")
+print(f"Average Price: ${prices.mean():.2f}")
+print(f"Volatility (Std): ${prices.std():.2f}")
+
+# 2. Calculate returns
+daily_returns = np.diff(prices) / prices[:-1] * 100
+print(f"\nAverage Daily Return: {daily_returns.mean():.2f}%")
+print(f"Best Day: +{daily_returns.max():.2f}%")
+print(f"Worst Day: {daily_returns.min():.2f}%")
+
+# 3. Moving average (7-day)
+window = 7
+moving_avg = np.convolve(prices, np.ones(window)/window, mode='valid')
+print(f"\nCurrent Price: ${prices[-1]:.2f}")
+print(f"7-Day Moving Average: ${moving_avg[-1]:.2f}")
+
+# 4. Find buy/sell signals (simplified)
+# Buy when price < 95% of moving average
+# Sell when price > 105% of moving average
+current_vs_ma = (prices[-len(moving_avg):] / moving_avg - 1) * 100
+if current_vs_ma[-1] < -5:
+    signal = "BUY (Price below MA)"
+elif current_vs_ma[-1] > 5:
+    signal = "SELL (Price above MA)"
+else:
+    signal = "HOLD"
+print(f"\nRecommendation: {signal}")
+
+# 5. Winning vs losing days
+winning_days = np.sum(daily_returns > 0)
+losing_days = np.sum(daily_returns < 0)
+win_rate = (winning_days / len(daily_returns)) * 100
+print(f"\nWinning Days: {winning_days} ({win_rate:.1f}%)")
+print(f"Losing Days: {losing_days}")
+```
+
+---
+
+## 17. Common Mistakes Beginners Make
+
+### ❌ Mistake 1: Confusing Views and Copies
+
+```python
+import numpy as np
+
+# WRONG - Thinking slice is independent
+arr = np.array([1, 2, 3, 4, 5])
+subset = arr[1:4]  # This is a VIEW!
+subset[0] = 999
+print(arr)  # [1, 999, 3, 4, 5] - Original changed! 😱
+
+# CORRECT - Use copy() when you need independence
+arr = np.array([1, 2, 3, 4, 5])
+subset = arr[1:4].copy()  # Now it's a COPY
+subset[0] = 999
+print(arr)  # [1, 2, 3, 4, 5] - Original unchanged ✅
+```
+
+### ❌ Mistake 2: Wrong Axis Parameter
+
+```python
+import numpy as np
+
+matrix = np.array([[1, 2, 3],
+                   [4, 5, 6]])
+
+# WRONG - Confusing axis
+row_sums = matrix.sum(axis=1)  # Sums ACROSS columns (for each row)
+col_sums = matrix.sum(axis=0)  # Sums ACROSS rows (for each column)
+
+# Remember: axis=0 is VERTICAL (↓), axis=1 is HORIZONTAL (→)
+print(f"Row sums (axis=1): {row_sums}")  # [6, 15]
+print(f"Col sums (axis=0): {col_sums}")  # [5, 7, 9]
+```
+
+### ❌ Mistake 3: Using `==` for Array Comparison
+
+```python
+import numpy as np
+
+arr1 = np.array([1, 2, 3])
+arr2 = np.array([1, 2, 3])
+
+# WRONG - This gives element-wise comparison
+result = arr1 == arr2
+print(result)  # [True True True] - Not a single boolean!
+
+# CORRECT - Use array_equal() for whole array comparison
+result = np.array_equal(arr1, arr2)
+print(result)  # True ✅
+
+# Or use .all() on element-wise comparison
+result = (arr1 == arr2).all()
+print(result)  # True ✅
+```
+
+### ❌ Mistake 4: Forgetting Parentheses in Conditions
+
+```python
+import numpy as np
+
+arr = np.array([1, 2, 3, 4, 5])
+
+# WRONG - Will cause error!
+# result = arr > 2 & arr < 5  # Error! & has higher precedence
+
+# CORRECT - Use parentheses!
+result = (arr > 2) & (arr < 5)
+print(result)  # [False False True True False] ✅
+```
+
+### ❌ Mistake 5: Not Matching Array Shapes
+
+```python
+import numpy as np
+
+# WRONG - Shape mismatch
+arr1 = np.array([1, 2, 3])
+arr2 = np.array([[4, 5], [6, 7]])
+# arr1 + arr2  # Error! Can't broadcast (3,) with (2, 2)
+
+# CORRECT - Make sure shapes are compatible
+arr1 = np.array([[1, 2], [3, 4]])
+arr2 = np.array([[5, 6], [7, 8]])
+result = arr1 + arr2  # Works! Both are (2, 2) ✅
+```
+
+### ❌ Mistake 6: Modifying Array While Iterating
+
+```python
+import numpy as np
+
+arr = np.array([1, 2, 3, 4, 5])
+
+# WRONG - Don't modify size while iterating
+# for i in range(len(arr)):
+#     if arr[i] > 2:
+#         arr = np.delete(arr, i)  # Bad! Array size changes!
+
+# CORRECT - Use boolean indexing
+arr = np.array([1, 2, 3, 4, 5])
+arr = arr[arr <= 2]  # Keep only elements <= 2
+print(arr)  # [1, 2] ✅
+```
+
+### ❌ Mistake 7: Forgetting to Assign Result
+
+```python
+import numpy as np
+
+arr = np.array([1, 2, 3, 4, 5])
+
+# WRONG - np.sort() returns sorted array, doesn't modify original
+np.sort(arr)
+print(arr)  # [1, 2, 3, 4, 5] - Still unsorted!
+
+# CORRECT - Assign the result OR use in-place sort
+arr = np.sort(arr)  # Assign result
+# OR
+arr.sort()  # In-place sort ✅
+```
+
+### ❌ Mistake 8: Integer Division Confusion
+
+```python
+import numpy as np
+
+arr = np.array([1, 2, 3, 4, 5])
+
+# WRONG - Integer array stays integer
+result = arr / 2
+print(result)  # [0.5 1.  1.5 2.  2.5] - Converts to float automatically
+
+# If you want to keep integers and need floor division
+result = arr // 2
+print(result)  # [0 1 1 2 2] - Floor division
+
+# To ensure float from start
+arr_float = arr.astype(float)
+result = arr_float / 2
+```
+
+---
+
+## 18. When to Use NumPy and When Not To
+
+### ✅ WHEN TO USE NumPy
+
+**1. Working with Numerical Data**
+```python
+# Perfect for NumPy! ✅
+temperatures = np.array([72, 68, 75, 80, 65, 70, 78])
+average_temp = temperatures.mean()
+hot_days = temperatures[temperatures > 75]
+```
+
+**2. Mathematical Operations on Arrays**
+```python
+# Perfect for NumPy! ✅
+prices = np.array([100, 200, 150])
+tax = 0.08
+final_prices = prices * (1 + tax)  # One line!
+```
+
+**3. Large Datasets (100+ elements)**
+```python
+# Perfect for NumPy! ✅
+# Much faster than Python lists for large data
+data = np.random.randn(1000000)
+mean = data.mean()  # Very fast!
+```
+
+**4. Matrix Operations**
+```python
+# Perfect for NumPy! ✅
+matrix1 = np.array([[1, 2], [3, 4]])
+matrix2 = np.array([[5, 6], [7, 8]])
+result = np.dot(matrix1, matrix2)  # Matrix multiplication
+```
+
+**5. Data Science and Machine Learning**
+```python
+# Perfect for NumPy! ✅
+# Preprocessing data for ML
+data = np.array([[1, 2], [3, 4], [5, 6]])
+normalized = (data - data.mean()) / data.std()
+```
+
+### ❌ WHEN NOT TO USE NumPy
+
+**1. Mixed Data Types**
+```python
+# DON'T use NumPy ❌
+# Use Python list instead
+mixed_data = ['Alice', 25, 5.7, True]  # Different types
+# NumPy converts everything to same type (usually string)
+
+# DO use Python list ✅
+data_list = ['Alice', 25, 5.7, True]
+```
+
+**2. Small Amount of Data**
+```python
+# DON'T use NumPy for just 3-5 elements ❌
+small_nums = np.array([1, 2, 3])
+total = small_nums.sum()
+
+# DO use Python list (simpler) ✅
+small_nums = [1, 2, 3]
+total = sum(small_nums)
+```
+
+**3. Frequent Add/Remove Operations**
+```python
+# DON'T use NumPy ❌
+# NumPy arrays have fixed size
+arr = np.array([1, 2, 3])
+# arr.append(4)  # No append method!
+# Have to use np.append() which creates new array (slow!)
+
+# DO use Python list ✅
+lst = [1, 2, 3]
+lst.append(4)  # Fast and easy!
+```
+
+**4. Complex Nested Structures**
+```python
+# DON'T use NumPy ❌
+# For complex nested structures with varying sizes
+data = {
+    'users': [
+        {'name': 'Alice', 'scores': [85, 90, 78]},
+        {'name': 'Bob', 'scores': [92, 88]}
+    ]
+}
+
+# DO use Python dictionaries/lists ✅
+```
+
+**5. String Manipulations**
+```python
+# DON'T use NumPy ❌
+names = np.array(['alice', 'bob', 'charlie'])
+# NumPy doesn't have good string methods
+
+# DO use Python lists with comprehensions ✅
+names = ['alice', 'bob', 'charlie']
+capitalized = [name.capitalize() for name in names]
+```
+
+### 🎯 Quick Decision Guide
+
+**Use NumPy when:**
+- ✅ All data is numerical
+- ✅ Dataset is large (100+ elements)
+- ✅ Need mathematical operations
+- ✅ Performance is important
+- ✅ Doing data science/ML
+
+**Use Python Lists when:**
+- ✅ Mixed data types
+- ✅ Small dataset (< 100 elements)
+- ✅ Need frequent add/remove
+- ✅ Complex nested structures
+- ✅ Primarily string data
+
+---
+
+## 🎓 Final Summary
+
+### What You've Learned
+
+**Congratulations!** 🎉 You've completed the NumPy tutorial. Here's what you now know:
+
+1. **Basics**
+   - What NumPy is and why it's powerful
+   - Creating arrays (1D, 2D, 3D)
+   - Array properties (shape, dtype, size)
+
+2. **Data Access**
+   - Indexing and slicing
+   - Boolean indexing and filtering
+   - Copy vs View
+
+3. **Operations**
+   - Arithmetic operations
+   - Broadcasting
+   - Mathematical functions (mean, sum, std, etc.)
+
+4. **Transformation**
+   - Reshaping arrays
+   - Joining and splitting
+   - Sorting and searching
+
+5. **Advanced**
+   - Random number generation
+   - Real-world examples
+   - Common mistakes to avoid
+   - When to use NumPy
+
+### Next Steps
+
+**Ready to level up? Here's what to learn next:**
+
+1. **Pandas** 📊
+   - Built on top of NumPy
+   - For working with tables (DataFrames)
+   - Perfect for data analysis
+
+2. **Matplotlib** 📈
+   - Visualization library
+   - Creates plots and charts
+   - Works great with NumPy arrays
+
+3. **Scikit-learn** 🤖
+   - Machine Learning library
+   - Uses NumPy extensively
+   - For building ML models
+
+4. **TensorFlow/PyTorch** 🧠
+   - Deep Learning frameworks
+   - Based on NumPy concepts
+   - For neural networks
+
+### Practice Projects
+
+**Try these to solidify your knowledge:**
+
+1. **Grade Calculator**
+   - Load student grades
+   - Calculate averages, find top students
+   - Generate report cards
+
+2. **Stock Price Analyzer**
+   - Load historical prices
+   - Calculate moving averages
+   - Find buy/sell signals
+
+3. **Image Filter**
+   - Load image as NumPy array
+   - Apply filters (blur, sharpen, brighten)
+   - Save processed image
+
+4. **Weather Data Analysis**
+   - Load temperature data
+   - Find trends and patterns
+   - Calculate statistics
+
+### Remember These Key Points
+
+1. **NumPy is fast** - Use it for numerical operations on large datasets
+2. **Broadcasting is powerful** - Understand it to write clean code
+3. **Views vs Copies** - Know the difference to avoid bugs
+4. **Right tool for the job** - Don't use NumPy for everything
+5. **Practice makes perfect** - Write code, make mistakes, learn!
+
+---
+
+## 📚 Quick Reference Card
+
+```python
+import numpy as np
+
+# Creation
+arr = np.array([1, 2, 3])              # From list
+arr = np.zeros((3, 4))                 # 3×4 of zeros
+arr = np.ones(5)                       # 5 ones
+arr = np.arange(0, 10, 2)             # 0, 2, 4, 6, 8
+arr = np.linspace(0, 1, 5)            # 5 numbers 0 to 1
+
+# Properties
+arr.shape                              # Dimensions
+arr.ndim                               # Number of dimensions
+arr.size                               # Total elements
+arr.dtype                              # Data type
+
+# Indexing
+arr[0]                                 # First element
+arr[-1]                                # Last element
+arr[1:4]                               # Slice
+arr[arr > 5]                           # Boolean indexing
+
+# Operations
+arr + 5                                # Add scalar
+arr * 2                                # Multiply scalar
+arr1 + arr2                            # Element-wise
+arr @ matrix                           # Matrix multiplication
+
+# Math Functions
+np.mean(arr)                           # Average
+np.sum(arr)                            # Sum
+np.std(arr)                            # Standard deviation
+np.max(arr), np.min(arr)              # Max, Min
+np.argmax(arr)                         # Index of max
+
+# Reshaping
+arr.reshape(2, 3)                      # New shape
+arr.flatten()                          # To 1D (copy)
+arr.ravel()                            # To 1D (view)
+arr.T                                  # Transpose
+
+# Joining/Splitting
+np.concatenate([arr1, arr2])          # Join arrays
+np.vstack([arr1, arr2])               # Vertical stack
+np.hstack([arr1, arr2])               # Horizontal stack
+np.split(arr, 3)                       # Split into 3
+
+# Random
+np.random.rand(3)                      # Random floats [0,1)
+np.random.randint(1, 10, 5)           # Random integers
+np.random.randn(3)                     # Normal distribution
+np.random.choice(arr)                  # Random choice
+np.random.seed(42)                     # Set seed
+```
+
+---
+
+## 🎉 Congratulations!
+
+You've completed the NumPy tutorial from basics to advanced! You're now ready to:
+- Use NumPy confidently in your projects
+- Process and analyze data efficiently
+- Move on to Pandas and Machine Learning
+- Build amazing data science applications
+
+**Keep practicing, keep learning, and most importantly - have fun coding!** 💻✨
+
+---
+
+*"In God we trust; all others bring data."* - W. Edwards Deming
+
+Made with ❤️ for aspiring data scientists and Python programmers.
