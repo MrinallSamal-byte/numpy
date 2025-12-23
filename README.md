@@ -26,7 +26,9 @@ The tutorial covers everything you need to know about NumPy:
 
 ### 🚀 Getting Started
 
-Read the complete tutorial: **[numpy_tutorial_complete.md](numpy_tutorial_complete.md)**
+1. **Read the complete tutorial**: **[numpy_tutorial_complete.md](numpy_tutorial_complete.md)**
+2. **Install NumPy**: `pip install -r requirements.txt` or `pip install numpy`
+3. **Run the examples**: `python tutorial_examples.py`
 
 ### 📖 Tutorial Features
 
@@ -36,6 +38,13 @@ Read the complete tutorial: **[numpy_tutorial_complete.md](numpy_tutorial_comple
 ✅ **Plenty of examples** - Learn by doing with clear code examples  
 ✅ **Practice questions** - Test your understanding after each topic  
 ✅ **Real-world applications** - See NumPy in action  
+
+### 📁 Files in This Repository
+
+- **`numpy_tutorial_complete.md`** - Complete tutorial (3600+ lines)
+- **`tutorial_examples.py`** - Runnable examples demonstrating key concepts
+- **`requirements.txt`** - Package dependencies (NumPy)
+- **`README.md`** - This file
 
 ### 🎯 Who Is This For?
 
@@ -59,9 +68,10 @@ After completing this tutorial, you will:
 1. Start with Section 1 (Introduction)
 2. Follow the tutorial sequentially
 3. Try the examples yourself
-4. Answer practice questions
-5. Build the suggested projects
-6. Move on to Pandas and Machine Learning!
+4. Run `tutorial_examples.py` to see concepts in action
+5. Answer practice questions
+6. Build the suggested projects
+7. Move on to Pandas and Machine Learning!
 
 ### 📝 Notes
 
